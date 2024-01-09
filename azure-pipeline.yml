@@ -1,0 +1,42 @@
+trigger:
+- none
+
+parameters:
+- name: ServiceConnection
+  displayName: Service Connection
+  type: string
+  default: developing-aws-service-endpoint
+  values:
+    - developing-aws-service-endpoint
+    - production-aws-service-endpoint
+- name: AwsRegion
+  displayName: AWS Region
+  type: string
+  default: eu-central-1
+- name: environmentName
+  type: string
+  default: developing
+  values:
+    - developing
+    - production
+
+pool:
+  name: BuildAgents
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: '${{ parameters.environmentName }}'
+  displayName: DeployStage-${{ parameters.environmentName }}
+  jobs:
+  - job: DeployApp
+    steps:
+    - template: azure-pipelines-common.yml
+    - task: AWSShellScript@1
+      inputs:
+        awsCredentials: ${{ parameters.ServiceConnection }}
+        regionName: ${{ parameters.AwsRegion }}
+        scriptType: 'inline'
+        inlineScript: |
+          echo "Deploying App in "${{ parameters.environmentName }} $AWS_DEFAULT_REGION
+          cdk deploy -ci --require-approval never --context environment=${{ parameters.environmentName }}
+      displayName: 'Deploying CDK app'
